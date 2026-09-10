@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-mujoco-uni = ["mujoco-uni"]
+mujoco-uni-runtime = ["mujoco_uni_runtime"]
 mujoco = ["mujoco"]
 
 [project.scripts]

@@ -6,23 +6,30 @@ from pathlib import Path
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Attempt to import mujoco-uni; fall back to standard mujoco for baselines
+# Attempt to import mujoco_uni_runtime (mujoco_uni.batch_env); fall back to
+# mujoco-uni (mujoco.batch_env), then to standard mujoco for baselines
 # ---------------------------------------------------------------------------
 try:
     import mujoco
-    from mujoco.batch_env import BatchEnvPool
+    from mujoco_uni.batch_env import BatchEnvPool
     HAS_BATCH_ENV = True
     print(f"mujoco version: {mujoco.__version__} (BatchEnvPool available)")
 except ImportError:
     try:
         import mujoco
-        BatchEnvPool = None
-        HAS_BATCH_ENV = False
-        print(f"mujoco version: {mujoco.__version__} (standard mujoco, no BatchEnvPool)")
+        from mujoco.batch_env import BatchEnvPool
+        HAS_BATCH_ENV = True
+        print(f"mujoco version: {mujoco.__version__} (BatchEnvPool available)")
     except ImportError:
-        mujoco = None
-        BatchEnvPool = None
-        HAS_BATCH_ENV = False
+        try:
+            import mujoco
+            BatchEnvPool = None
+            HAS_BATCH_ENV = False
+            print(f"mujoco version: {mujoco.__version__} (standard mujoco, no BatchEnvPool)")
+        except ImportError:
+            mujoco = None
+            BatchEnvPool = None
+            HAS_BATCH_ENV = False
 
 # ---------------------------------------------------------------------------
 # Paths (relative to this package)
