@@ -46,14 +46,19 @@ METHOD_COLORS = {
     "python-loop":   COLOR_PINK,   # pink
     "python-mp":     COLOR_BLUE,   # blue
     "mujocouni-cpp": COLOR_CYAN,   # cyan
+    "mjbatch":       COLOR_LAVENDER,  # lavender
 }
 MULTIMODEL_COLORS = {
     "single": COLOR_PINK,
     "multi":  COLOR_BLUE,
 }
 
+# Method arms in canonical order (mjbatch absent from older result files;
+# figure code skips missing arms)
+METHODS = ["python-loop", "python-mp", "mujocouni-cpp", "mjbatch"]
+
 ROBOT_MARKERS = {"Go1": "o", "Allegro": "s", "Franka": "^", "Humanoid": "D"}
-METHOD_MARKERS = {"python-loop": "o", "python-mp": "s", "mujocouni-cpp": "^"}
+METHOD_MARKERS = {"python-loop": "o", "python-mp": "s", "mujocouni-cpp": "^", "mjbatch": "D"}
 ROBOT_LINESTYLES = {"Go1": "-", "Allegro": "--", "Franka": "-.", "Humanoid": ":"}
 ROBOT_HATCHES = {"Go1": "", "Allegro": "//", "Franka": "", "Humanoid": "//"}
 
@@ -61,6 +66,7 @@ METHOD_LABELS = {
     "python-loop":   "Python for-loop",
     "python-mp":     "Python multiprocessing",
     "mujocouni-cpp": "MuJoCoUni",
+    "mjbatch":       "mjbatch",
 }
 
 # Bar chart edge + hatch for methods
@@ -68,6 +74,7 @@ METHOD_HATCHES = {
     "python-loop":   "",
     "python-mp":     "//",
     "mujocouni-cpp": "",
+    "mjbatch":       "xx",
 }
 
 # Minimum env count (nenv < 32 is too noisy)

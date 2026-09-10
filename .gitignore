@@ -3,5 +3,6 @@ __pycache__/
 .venv/
 uv.lock
 benchmark_results.json
+benchmark_results_*.json
 /figures/
 tmp*.xml

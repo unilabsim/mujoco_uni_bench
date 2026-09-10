@@ -15,6 +15,10 @@ dependencies = [
 [project.optional-dependencies]
 mujoco-uni-runtime = ["mujoco_uni_runtime"]
 mujoco = ["mujoco"]
+mjbatch = ["mjbatch"]
+
+[tool.uv.sources]
+mjbatch = { path = "thirdparty/mjbatch", editable = true }
 
 [project.scripts]
 mujoco-uni-bench = "mujoco_uni_bench.run:main"

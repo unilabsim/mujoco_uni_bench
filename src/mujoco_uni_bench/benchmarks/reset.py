@@ -4,9 +4,46 @@ from ..constants import (
     NUM_ENVS_LIST, RESET_FRACTIONS, PARTIAL_RESET_NUM_ENVS,
     WARMUP_FAST, REPEAT_FAST, WARMUP_SLOW, REPEAT_SLOW, get_nthread,
 )
-from ..model_utils import HAS_BATCH_ENV, BatchEnvPool, load_model, _get_mp_path, get_random_state
+from ..model_utils import (
+    HAS_BATCH_ENV, HAS_MJBATCH, BatchEnvPool, mjbatch,
+    load_model, _get_mp_path, get_random_state, mjbatch_state_loader,
+)
 from ..timing import bench_time
 from ..baselines import python_loop_reset, python_mp_reset
+
+# Arm keys in the results dict, grouped by the --impl selector that enables
+# them. Default (no --impl) runs all arms, matching the historical behavior.
+_IMPL_ARMS = {
+    "python": ["python-loop", "python-mp"],
+    "batch_env": ["mujocouni-cpp"],
+    "mjbatch": ["mjbatch"],
+}
+
+_IMPL_AVAILABLE = {
+    "python": lambda: True,
+    "batch_env": lambda: HAS_BATCH_ENV,
+    "mjbatch": lambda: HAS_MJBATCH,
+}
+
+
+def _selected_arms(args):
+    impls = args.impl if args.impl else ["python", "batch_env"]
+    arms = []
+    for impl in impls:
+        if not _IMPL_AVAILABLE[impl]():
+            raise RuntimeError(f"implementation {impl!r} requested but not available")
+        arms.extend(_IMPL_ARMS[impl])
+    return arms
+
+
+def _mjbatch_reset_latency(batch, load, env_ids):
+    ids = np.ascontiguousarray(env_ids, dtype=np.int64)
+
+    def reset_once():
+        load(ids)
+        batch.reset(ids)
+
+    return bench_time(reset_once, warmup=WARMUP_FAST, repeat=REPEAT_FAST)
 
 
 # ===================================================================
@@ -19,7 +56,9 @@ def bench_reset(args):
 
     nthread = get_nthread(args)
     robots = ["Go1"]
+    arms = _selected_arms(args)
     results = {
+        "arms": arms,
         "full": {"num_envs": NUM_ENVS_LIST},
         "partial": {
             "num_envs": PARTIAL_RESET_NUM_ENVS,
@@ -31,40 +70,42 @@ def bench_reset(args):
         print(f"\n--- {robot} (Full Reset) ---")
         model = load_model(robot)
         model_path = _get_mp_path(robot)
-        loop_data, mp_data, cpp_data = [], [], []
+        data = {arm: [] for arm in arms}
 
         for nenv in NUM_ENVS_LIST:
             states = get_random_state(model, nenv)
             env_ids = np.arange(nenv, dtype=np.int32)
 
-            # Python for-loop
-            t = bench_time(lambda: python_loop_reset(model, states, env_ids),
-                           warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
-            loop_data.append(t)
+            if "python-loop" in arms:
+                t = bench_time(lambda: python_loop_reset(model, states, env_ids),
+                               warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
+                data["python-loop"].append(t)
 
-            # Python multiprocessing
-            nw = min(nenv, get_nthread(args))
-            t = bench_time(lambda: python_mp_reset(model_path, states, env_ids, nw),
-                           warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
-            mp_data.append(t)
+            if "python-mp" in arms:
+                nw = min(nenv, get_nthread(args))
+                t = bench_time(lambda: python_mp_reset(model_path, states, env_ids, nw),
+                               warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
+                data["python-mp"].append(t)
 
-            # MuJoCoUni C++
-            if HAS_BATCH_ENV:
+            if "mujocouni-cpp" in arms:
                 pool = BatchEnvPool(model, nbatch=nenv, nthread=nthread)
                 t = bench_time(lambda: pool.reset(env_ids, states),
                                warmup=WARMUP_FAST, repeat=REPEAT_FAST)
-                cpp_data.append(t)
+                data["mujocouni-cpp"].append(t)
                 del pool
-            else:
-                cpp_data.append(None)
 
-            print(f"  nenv={nenv:5d}  loop={loop_data[-1]:.4f}s  mp={mp_data[-1]:.4f}s  cpp={cpp_data[-1]}")
+            if "mjbatch" in arms:
+                batch = mjbatch.Batch(model, nenv, num_threads=nthread)
+                load = mjbatch_state_loader(batch, model, states)
+                data["mjbatch"].append(_mjbatch_reset_latency(batch, load, env_ids))
+                del batch
 
-        results["full"][robot] = {
-            "python-loop": loop_data,
-            "python-mp": mp_data,
-            "mujocouni-cpp": cpp_data,
-        }
+            line = f"  nenv={nenv:5d}"
+            for arm in arms:
+                line += f"  {arm}={data[arm][-1]:.4f}s"
+            print(line)
+
+        results["full"][robot] = data
 
     # Partial reset
     for robot in robots:
@@ -73,44 +114,47 @@ def bench_reset(args):
         model_path = _get_mp_path(robot)
         nenv = PARTIAL_RESET_NUM_ENVS
         states = get_random_state(model, nenv)
-        loop_data, mp_data, cpp_data = [], [], []
+        data = {arm: [] for arm in arms}
 
-        if HAS_BATCH_ENV:
-            pool = BatchEnvPool(model, nbatch=nenv, nthread=nthread)
+        pool = BatchEnvPool(model, nbatch=nenv, nthread=nthread) \
+            if "mujocouni-cpp" in arms else None
+        if "mjbatch" in arms:
+            batch = mjbatch.Batch(model, nenv, num_threads=nthread)
+            load = mjbatch_state_loader(batch, model, states)
 
         for frac in RESET_FRACTIONS:
             n_reset = int(nenv * frac)
             env_ids = np.arange(n_reset, dtype=np.int32)
             reset_states = states[:n_reset]
 
-            # Python for-loop
-            t = bench_time(lambda: python_loop_reset(model, reset_states, env_ids),
-                           warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
-            loop_data.append(t)
+            if "python-loop" in arms:
+                t = bench_time(lambda: python_loop_reset(model, reset_states, env_ids),
+                               warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
+                data["python-loop"].append(t)
 
-            # Python multiprocessing
-            nw = min(n_reset, get_nthread(args))
-            t = bench_time(lambda: python_mp_reset(model_path, reset_states, env_ids, nw),
-                           warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
-            mp_data.append(t)
+            if "python-mp" in arms:
+                nw = min(n_reset, get_nthread(args))
+                t = bench_time(lambda: python_mp_reset(model_path, reset_states, env_ids, nw),
+                               warmup=WARMUP_SLOW, repeat=REPEAT_SLOW)
+                data["python-mp"].append(t)
 
-            # MuJoCoUni C++
-            if HAS_BATCH_ENV:
+            if pool is not None:
                 t = bench_time(lambda: pool.reset(env_ids, reset_states),
                                warmup=WARMUP_FAST, repeat=REPEAT_FAST)
-                cpp_data.append(t)
-            else:
-                cpp_data.append(None)
+                data["mujocouni-cpp"].append(t)
 
-            print(f"  frac={frac:.0%}  loop={loop_data[-1]:.4f}s  mp={mp_data[-1]:.4f}s  cpp={cpp_data[-1]}")
+            if "mjbatch" in arms:
+                data["mjbatch"].append(_mjbatch_reset_latency(batch, load, env_ids))
 
-        if HAS_BATCH_ENV:
-            del pool
+            line = f"  frac={frac:.0%}"
+            for arm in arms:
+                line += f"  {arm}={data[arm][-1]:.4f}s"
+            print(line)
 
-        results["partial"][robot] = {
-            "python-loop": loop_data,
-            "python-mp": mp_data,
-            "mujocouni-cpp": cpp_data,
-        }
+        del pool
+        if "mjbatch" in arms:
+            del batch
+
+        results["partial"][robot] = data
 
     return results

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from .style import (
     COLOR_PINK, COLOR_BLUE,
     ROBOT_COLORS, ROBOT_HATCHES,
-    METHOD_COLORS, METHOD_HATCHES, METHOD_LABELS,
+    METHOD_COLORS, METHOD_HATCHES, METHOD_LABELS, METHODS,
     _bar_positions,
 )
 from .data import PLACEHOLDER
@@ -27,16 +27,25 @@ def fig1_bar(data, outdir):
 
     fig, (ax_step, ax_fwd) = plt.subplots(1, 2, figsize=(7.5, 4.2), sharey=True)
 
-    bar_w, offsets = _bar_positions(len(sel_envs), len(robots))
+    # Bar series: MuJoCoUni per robot, plus mjbatch (hatched) where present
+    series = []  # (robot, label, hatch, is_mjbatch)
+    for robot in robots:
+        series.append((robot, robot, ROBOT_HATCHES.get(robot, ""), False))
+        series.append((robot, f"{robot} (mjbatch)", "xx", True))
+
+    bar_w, offsets = _bar_positions(len(sel_envs), len(series))
     x = np.arange(len(sel_envs))
 
     for ax, key in [(ax_step, "step"), (ax_fwd, "forward")]:
-        for j, robot in enumerate(robots):
-            raw = d[key][robot]
+        for j, (robot, label, hatch, is_mj) in enumerate(series):
+            source = d.get(f"{key}_mjbatch", {}) if is_mj else d[key]
+            raw = source.get(robot)
+            if not raw:
+                continue
             vals = [raw[i] for i in sel_idx if i < len(raw)]
             ax.bar(x[:len(vals)] + offsets[j], vals, bar_w * 0.9,
                    color=ROBOT_COLORS[robot], edgecolor="white", linewidth=0.5,
-                   hatch=ROBOT_HATCHES.get(robot, ""), label=robot, alpha=0.85)
+                   hatch=hatch, label=label, alpha=0.85)
         ax.set_xticks(x)
         ax.set_xticklabels([str(n) for n in sel_envs])
         ax.set_xlabel("Number of environments")
@@ -48,9 +57,12 @@ def fig1_bar(data, outdir):
 
     handles, labels = ax_step.get_legend_handles_labels()
     fig.tight_layout(w_pad=2.0)
-    fig.subplots_adjust(top=0.84)
-    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.86),
-               ncol=4, frameon=False, fontsize=10)
+    ncol = min(len(labels), 4)
+    legend_rows = (len(labels) + ncol - 1) // ncol
+    fig.subplots_adjust(top=0.84 - 0.06 * (legend_rows - 1))
+    fig.legend(handles, labels, loc="lower center",
+               bbox_to_anchor=(0.5, 0.86 - 0.06 * (legend_rows - 1)),
+               ncol=ncol, frameon=False, fontsize=10)
     fig.suptitle("Step / Forward Throughput", fontsize=13, y=0.97)
     ax_step.xaxis.label.set_visible(False)
     ax_fwd.xaxis.label.set_visible(False)
@@ -118,7 +130,7 @@ def _method_bar(data, bench_key, model_key, sel_envs_list, title, ylabel, outnam
     if model_key not in d:
         return
     num_envs = d["num_envs"]
-    methods = ["python-loop", "python-mp", "mujocouni-cpp"]
+    methods = METHODS
 
     # Pick sel points that actually exist in num_envs
     sel_envs = [n for n in sel_envs_list if n in num_envs]
@@ -165,7 +177,7 @@ def fig3_bar(data, outdir):
     """Bar charts for reset benchmarks (Go1 only)."""
     d3 = data.get("bench3", PLACEHOLDER["bench3"])
     sel = [64, 256, 1024, 4096]
-    methods = ["python-loop", "python-mp", "mujocouni-cpp"]
+    methods = METHODS
 
     # Full reset bar chart
     num_envs = d3["full"]["num_envs"]
@@ -195,7 +207,7 @@ def fig3_bar(data, outdir):
     fig.tight_layout()
     fig.subplots_adjust(top=0.82)
     fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.84),
-               ncol=3, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
+               ncol=2, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
     fig.suptitle("Full Reset — Go1", fontsize=13, y=0.97)
     path = os.path.join(outdir, "fig_reset_full_bar.pdf")
     fig.savefig(path)
@@ -228,7 +240,7 @@ def fig3_bar(data, outdir):
     fig.tight_layout()
     fig.subplots_adjust(top=0.82)
     fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.84),
-               ncol=3, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
+               ncol=2, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
     fig.suptitle(f"Partial Reset — Go1 (N={nenv})", fontsize=13, y=0.97)
     path = os.path.join(outdir, "fig_reset_partial_bar.pdf")
     fig.savefig(path)

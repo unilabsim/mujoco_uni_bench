@@ -31,6 +31,15 @@ except ImportError:
             BatchEnvPool = None
             HAS_BATCH_ENV = False
 
+# mjbatch (thirdparty/): optional batched-executor arm. Requires mujoco==3.11.0.
+try:
+    import mjbatch
+    HAS_MJBATCH = True
+    print("mjbatch available (thirdparty)")
+except ImportError:
+    mjbatch = None
+    HAS_MJBATCH = False
+
 # ---------------------------------------------------------------------------
 # Paths (relative to this package)
 # ---------------------------------------------------------------------------
@@ -100,3 +109,49 @@ def get_random_state(model, nbatch, rng=None):
         mujoco.mj_forward(model, d)
         mujoco.mj_getState(model, d, states[i], mujoco.mjtState.mjSTATE_FULLPHYSICS)
     return states
+
+
+def mjbatch_state_loader(batch, model, states):
+    """Return a loader that injects FULLPHYSICS `states` rows into an mjbatch Batch.
+
+    mjbatch bind("state") rows are opaque mjSTATE_INTEGRATION vectors, wider
+    than the shared mjSTATE_FULLPHYSICS state arrays (they include warmstart),
+    so states are injected through the individual mjtState component fields.
+    load(ids) writes only those rows (for partial resets); load() writes all.
+
+    mjbatch copies bound input fields in only where values changed since the
+    last write, so re-writing identical states after a reset (which clobbers
+    the sim state back to defaults) would be silently skipped. The loader
+    therefore alternates between `states` and a copy offset by 1e-12, which is
+    physically identical but forces the copy-in on every call — matching the
+    per-call state copy that the other benchmark arms always perform.
+    """
+    if not HAS_MJBATCH:
+        raise RuntimeError("mjbatch is not available")
+    nq, nv, na = model.nq, model.nv, model.na
+    alt = states.copy()
+    alt[:, 1:] += 1e-12
+
+    def bind_views(rows):
+        views = [
+            (batch.bind("time"), rows[:, 0]),
+            (batch.bind("qpos"), rows[:, 1:1 + nq]),
+            (batch.bind("qvel"), rows[:, 1 + nq:1 + nq + nv]),
+        ]
+        if na:
+            views.append((batch.bind("act"), rows[:, 1 + nq + nv:]))
+        return views
+
+    views_a, views_b = bind_views(states), bind_views(alt)
+    state = {"alt": False}
+
+    def load(ids=None):
+        views = views_b if state["alt"] else views_a
+        state["alt"] = not state["alt"]
+        for view, values in views:
+            if ids is None:
+                view[:] = values
+            else:
+                view[ids] = values[ids]
+
+    return load

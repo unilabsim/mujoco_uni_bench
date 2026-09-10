@@ -40,6 +40,11 @@ def main():
     parser.add_argument("--warmup", type=int, default=WARMUP)
     parser.add_argument("--repeat", type=int, default=REPEAT)
     parser.add_argument("--nstep", type=int, default=NSTEP)
+    parser.add_argument("--impl", nargs="+", default=None,
+                        choices=["batch_env", "mjbatch", "python"],
+                        help="Implementations to measure (default: batch_env if "
+                             "available, else python loop). mjbatch comes from "
+                             "thirdparty/mjbatch.")
     parser.add_argument("--fwd-chunk-size", type=int, default=4,
                         help="Thread-pool chunk size for forward() (default: 4)")
     parser.add_argument("--output", type=str, default="benchmark_results.json")
@@ -60,6 +65,7 @@ def main():
     print(f"  NumPy:     {np.__version__}")
     print(f"  MuJoCo:    {mujoco.__version__}")
     print(f"  BatchEnv:  {'yes' if HAS_BATCH_ENV else 'no'}")
+    print(f"  impl:      {args.impl or 'auto'}")
     print(f"  CPU:       {platform.processor() or platform.machine()}")
     print(f"  Cores:     {cpu_count()}")
     print(f"  nthread:   {get_nthread(args)}")
@@ -85,6 +91,7 @@ def main():
             "numpy": np.__version__,
             "mujoco": mujoco.__version__,
             "batch_env": HAS_BATCH_ENV,
+            "impl": args.impl or "auto",
             "cpu": platform.processor() or platform.machine(),
             "cores": cpu_count(),
             "nthread": get_nthread(args),

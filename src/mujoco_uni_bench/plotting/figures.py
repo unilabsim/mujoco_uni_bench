@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from .style import (
     ROBOT_COLORS, ROBOT_MARKERS, ROBOT_LINESTYLES,
-    METHOD_COLORS, METHOD_MARKERS, METHOD_LABELS, MULTIMODEL_COLORS,
+    METHOD_COLORS, METHOD_MARKERS, METHOD_LABELS, MULTIMODEL_COLORS, METHODS,
     setup_log2_xaxis,
 )
 from .data import PLACEHOLDER
@@ -30,6 +30,20 @@ def fig1_step_forward(data, outdir):
         n = min(len(num_envs), len(fwd_vals))
         ax_fwd.plot(num_envs[:n], fwd_vals[:n], **kw)
 
+    # mjbatch arm: same robot colors, dashed lines
+    step_mj = d.get("step_mjbatch", {})
+    fwd_mj = d.get("forward_mjbatch", {})
+    for robot in robots:
+        if robot not in step_mj:
+            continue
+        kw = dict(color=ROBOT_COLORS[robot], marker=ROBOT_MARKERS[robot],
+                  linestyle="--", label=f"{robot} (mjbatch)",
+                  markeredgecolor="white", markeredgewidth=0.5)
+        n = min(len(num_envs), len(step_mj[robot]))
+        ax_step.plot(num_envs[:n], step_mj[robot][:n], **kw)
+        n = min(len(num_envs), len(fwd_mj[robot]))
+        ax_fwd.plot(num_envs[:n], fwd_mj[robot][:n], **kw)
+
     for ax, subtitle in [(ax_step, "(a) Batched Step"), (ax_fwd, "(b) Batched Forward")]:
         setup_log2_xaxis(ax, num_envs)
         ax.set_yscale("log")
@@ -40,9 +54,12 @@ def fig1_step_forward(data, outdir):
     # Title → Legend → Plot
     handles, labels = ax_step.get_legend_handles_labels()
     fig.tight_layout(w_pad=2.5)
-    fig.subplots_adjust(top=0.84)
-    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.86),
-               ncol=4, frameon=False, fontsize=10)
+    ncol = min(len(labels), 4)
+    legend_rows = (len(labels) + ncol - 1) // ncol
+    fig.subplots_adjust(top=0.84 - 0.06 * (legend_rows - 1))
+    fig.legend(handles, labels, loc="lower center",
+               bbox_to_anchor=(0.5, 0.86 - 0.06 * (legend_rows - 1)),
+               ncol=ncol, frameon=False, fontsize=10)
     fig.suptitle("Step / Forward Throughput", fontsize=13, y=0.97)
     # Unify xlabel after layout is done
     ax_step.xaxis.label.set_visible(False)
@@ -103,7 +120,7 @@ def fig2_multimodel(data, outdir):
 # ──────────────────────────────────────────────────────────────
 def fig3_reset_combined(data, outdir):
     d3 = data.get("bench3", PLACEHOLDER["bench3"])
-    methods = ["python-loop", "python-mp", "mujocouni-cpp"]
+    methods = METHODS
 
     fig, (ax_full, ax_partial) = plt.subplots(1, 2, figsize=(7.5, 4.2), sharey=True)
 
@@ -146,7 +163,7 @@ def fig3_reset_combined(data, outdir):
     fig.tight_layout(w_pad=2.5)
     fig.subplots_adjust(top=0.84)
     fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.86),
-               ncol=3, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
+               ncol=4, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
     fig.suptitle("Reset Performance — Go1", fontsize=13, y=0.97)
     # Align xlabels after layout is done
     ax_full.xaxis.label.set_visible(False)

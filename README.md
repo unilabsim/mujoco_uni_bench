@@ -32,7 +32,14 @@ uv sync --extra mujoco-uni-runtime
 # Option B: standard mujoco (Python baselines only, no BatchEnvPool)
 # uv sync --extra mujoco
 # or: pip install -e ".[mujoco]"
+
+# Option C: add the mjbatch arm (thirdparty/mjbatch, requires mujoco==3.11.0)
+# uv sync --extra mujoco-uni-runtime --extra mjbatch
 ```
+
+`mjbatch` is vendored as a thirdparty checkout at `thirdparty/mjbatch`
+(see `[tool.uv.sources]` in `pyproject.toml`). It provides an additional
+batched-executor arm next to `BatchEnvPool` and the Python baselines.
 
 ### 3. Run benchmarks
 
@@ -46,6 +53,10 @@ mujoco-uni-bench --bench 1 4      # Step/Forward + Jacobian
 
 # Customize parameters
 mujoco-uni-bench --repeat 50 --warmup 5 --nthread 16
+
+# Select implementations (benchmarks 1 and 3 support batch_env / mjbatch / python)
+mujoco-uni-bench --bench 1 --impl mjbatch          # mjbatch arm only
+mujoco-uni-bench --bench 1 --impl batch_env mjbatch  # side-by-side
 ```
 
 ### 4. Generate figures
@@ -70,6 +81,8 @@ Output figures are saved to `figures/` by default.
 mujoco_uni_bench/
 ├── pyproject.toml          # Project metadata, build system, entry points
 ├── README.md               # This file
+├── thirdparty/
+│   └── mjbatch             # mjbatch checkout (batched-executor arm)
 └── src/
     └── mujoco_uni_bench/
         ├── __init__.py     # Package version
