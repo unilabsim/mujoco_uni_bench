@@ -2,6 +2,8 @@
 
 Benchmark suite comparing **MuJoCoUni** (`BatchEnvPool` C++ thread pool) against Python for-loop and Python multiprocessing baselines across five benchmark categories.
 
+完整基准测试报告（含结果与图）见 [doc/benchmark_report.md](doc/benchmark_report.md)。
+
 ## Benchmarks
 
 | # | Benchmark | Models | Metric |
@@ -20,52 +22,44 @@ Benchmark suite comparing **MuJoCoUni** (`BatchEnvPool` C++ thread pool) against
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### 2. Create virtual environment and install dependencies
+### 2. Install the package
 
 ```bash
-# mujoco-uni must be installed separately (not on PyPI)
-# If you have mujoco-uni installed system-wide or in another venv,
-# create the venv with access to it:
-uv venv --python 3.13
-source .venv/bin/activate
+# Install with the MuJoCoUni runtime (BatchEnvPool C++ fast path)
+uv sync --extra mujoco-uni-runtime
+# or: pip install -e ".[mujoco-uni-runtime]"
 
-# Install base dependencies
-uv pip install numpy matplotlib
-
-# Install mujoco-uni (from local build or editable install)
-# Option A: editable install from source
-uv pip install -e /path/to/mujoco_uni/python
-
-# Option B: if mujoco-uni is already installed, use system packages
-# uv venv --system-site-packages
+# Option B: standard mujoco (Python baselines only, no BatchEnvPool)
+# uv sync --extra mujoco
+# or: pip install -e ".[mujoco]"
 ```
 
 ### 3. Run benchmarks
 
 ```bash
 # Run all benchmarks (takes ~15-20 minutes due to slow Python baselines)
-python run_benchmarks.py
+mujoco-uni-bench
 
 # Run specific benchmarks
-python run_benchmarks.py --bench 1        # Step/Forward only
-python run_benchmarks.py --bench 1 4      # Step/Forward + Jacobian
+mujoco-uni-bench --bench 1        # Step/Forward only
+mujoco-uni-bench --bench 1 4      # Step/Forward + Jacobian
 
 # Customize parameters
-python run_benchmarks.py --repeat 50 --warmup 5 --nthread 16
+mujoco-uni-bench --repeat 50 --warmup 5 --nthread 16
 ```
 
 ### 4. Generate figures
 
 ```bash
 # Generate all figures (requires benchmark_results.json from step 3)
-python plot_benchmarks.py
+mujoco-uni-plot
 
 # Generate specific figures
-python plot_benchmarks.py --fig 1         # Step/Forward figure only
-python plot_benchmarks.py --fig 1 2 3 4 5 # All figures
+mujoco-uni-plot --fig 1         # Step/Forward figure only
+mujoco-uni-plot --fig 1 2 3 4 5 # All figures
 
 # Custom data / output directory
-python plot_benchmarks.py --data path/to/results.json --outdir ./my_figures
+mujoco-uni-plot --data path/to/results.json --outdir ./my_figures
 ```
 
 Output figures are saved to `figures/` by default.
@@ -74,19 +68,27 @@ Output figures are saved to `figures/` by default.
 
 ```
 mujoco_uni_bench/
-├── pyproject.toml          # Project metadata and dependencies
+├── pyproject.toml          # Project metadata, build system, entry points
 ├── README.md               # This file
-├── run_benchmarks.py       # Benchmark runner
-├── plot_benchmarks.py      # Figure generator
-├── models/                 # Robot model assets
-│   ├── unitree_go1/        # Go1 quadruped (18 DoF)
-│   ├── wonik_allegro/      # Allegro hand (16 DoF)
-│   ├── franka_emika_panda/ # Franka Panda arm (9 DoF)
-│   ├── humanoid/           # CMU Humanoid (56 DoF)
-│   └── terrain/            # Stairs height-field
-├── benchmark_results.json  # Generated benchmark data (gitignored)
-└── figures/                # Generated PDF figures (gitignored)
+└── src/
+    └── mujoco_uni_bench/
+        ├── __init__.py     # Package version
+        ├── constants.py    # Default benchmark parameters
+        ├── model_utils.py  # mujoco import guard, model loading helpers
+        ├── timing.py       # bench_time() timing helper
+        ├── baselines.py    # Python for-loop / multiprocessing baselines
+        ├── benchmarks/     # Benchmark implementations (BENCH_MAP)
+        ├── run.py          # mujoco-uni-bench entry point
+        ├── plotting/       # Figure generator (mujoco-uni-plot entry point)
+        └── models/         # Robot model assets (package data)
+            ├── unitree_go1/        # Go1 quadruped (18 DoF)
+            ├── wonik_allegro/      # Allegro hand (16 DoF)
+            ├── franka_emika_panda/ # Franka Panda arm (9 DoF)
+            ├── humanoid/           # CMU Humanoid (56 DoF)
+            └── terrain/            # Stairs height-field
 ```
+
+`benchmark_results.json` (generated benchmark data) and `figures/` (generated PDF figures) are written to the current working directory and are gitignored.
 
 ## Model Sources
 
