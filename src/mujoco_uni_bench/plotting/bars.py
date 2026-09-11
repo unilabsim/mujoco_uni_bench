@@ -163,8 +163,8 @@ def _method_bar(data, bench_key, model_key, sel_envs_list, title, ylabel, outnam
 
     handles, labels = ax.get_legend_handles_labels()
     fig.tight_layout()
-    fig.subplots_adjust(top=0.84)
-    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.82),
+    fig.subplots_adjust(top=0.78)
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.74),
                ncol=3, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
     fig.suptitle(title, fontsize=13, y=0.97)
     path = os.path.join(outdir, outname)

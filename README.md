@@ -2,7 +2,7 @@
 
 Benchmark suite comparing **MuJoCoUni** (`BatchEnvPool` C++ thread pool) against Python for-loop and Python multiprocessing baselines across five benchmark categories.
 
-完整基准测试报告（含结果与图）见 [doc/benchmark_report.md](doc/benchmark_report.md)。
+完整基准测试报告（含结果与图）见 [doc/benchmark_report.md](doc/benchmark_report.md)（[English](doc/benchmark_report_en.md)）。
 
 ## Benchmarks
 

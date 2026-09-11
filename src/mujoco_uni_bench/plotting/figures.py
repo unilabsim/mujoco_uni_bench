@@ -185,7 +185,7 @@ def fig3_reset_combined(data, outdir):
 def fig4_jacobian(data, outdir):
     d = data.get("bench4", PLACEHOLDER["bench4"])
     num_envs = d["num_envs"]
-    methods = ["python-loop", "python-mp", "mujocouni-cpp"]
+    methods = METHODS
 
     fig, ax = plt.subplots(1, 1, figsize=(5.0, 4.2))
 
@@ -205,8 +205,8 @@ def fig4_jacobian(data, outdir):
 
     handles, labels = ax.get_legend_handles_labels()
     fig.tight_layout()
-    fig.subplots_adjust(top=0.84)
-    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.82),
+    fig.subplots_adjust(top=0.78)
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.74),
                ncol=3, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
     fig.suptitle("Site Jacobian Computation — Franka", fontsize=13, y=0.97)
     path = os.path.join(outdir, "fig_jacobian.pdf")
@@ -221,7 +221,7 @@ def fig4_jacobian(data, outdir):
 def fig5_hfield(data, outdir):
     d = data.get("bench5", PLACEHOLDER["bench5"])
     num_envs = d["num_envs"]
-    methods = ["python-loop", "python-mp", "mujocouni-cpp"]
+    methods = METHODS
 
     fig, ax = plt.subplots(1, 1, figsize=(5.0, 4.2))
 
@@ -240,8 +240,8 @@ def fig5_hfield(data, outdir):
 
     handles, labels = ax.get_legend_handles_labels()
     fig.tight_layout()
-    fig.subplots_adjust(top=0.84)
-    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.80),
+    fig.subplots_adjust(top=0.78)
+    fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.72),
                ncol=3, frameon=False, fontsize=10, columnspacing=1.0, handlelength=1.5)
     fig.suptitle("Height-Field Sampling — Terrain", fontsize=13, y=0.95)
     path = os.path.join(outdir, "fig_hfield.pdf")

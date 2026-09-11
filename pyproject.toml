@@ -15,11 +15,16 @@ dependencies = [
 [project.optional-dependencies]
 mujoco-uni-runtime = ["mujoco_uni_runtime"]
 mujoco = ["mujoco"]
-mjbatch = ["mjbatch"]
+# mjbatch query arms (bench 4/5) need jac_site/sample_hfield, not yet on PyPI;
+# pin the feature commit until the next mjbatch release.
+mjbatch = ["mjbatch @ git+https://github.com/unilabsim/mjbatch.git@6a176de953286de714732b1fdd79910c75bbb341"]
 
 [project.scripts]
 mujoco-uni-bench = "mujoco_uni_bench.run:main"
 mujoco-uni-plot = "mujoco_uni_bench.plotting.cli:main"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mujoco_uni_bench"]

@@ -43,8 +43,9 @@ def main():
     parser.add_argument("--impl", nargs="+", default=None,
                         choices=["batch_env", "mjbatch", "python"],
                         help="Implementations to measure (default: batch_env if "
-                             "available, else python loop). mjbatch comes from "
-                             "the PyPI mjbatch package.")
+                             "available, else python loop). The mjbatch query arms "
+                             "(bench 4/5) need the jac_site/sample_hfield build; see "
+                             "pyproject.toml.")
     parser.add_argument("--fwd-chunk-size", type=int, default=4,
                         help="Thread-pool chunk size for forward() (default: 4)")
     parser.add_argument("--output", type=str, default="benchmark_results.json")
