@@ -2,7 +2,7 @@
 
 **日期**：2026-09-10
 **代码仓库**：`mujoco_uni_bench`
-**运行时**：`mujoco_uni_runtime` 0.5.0（`mujoco_uni.batch_env.BatchEnvPool`）、`mjbatch` 0.1.0（`thirdparty/mjbatch`，editable 引入）
+**运行时**：`mujoco_uni_runtime` 0.5.0（`mujoco_uni.batch_env.BatchEnvPool`）、`mjbatch` 0.1.0（PyPI）
 
 ## 概述
 
@@ -25,7 +25,7 @@
 | NumPy | 2.5.3 |
 | MuJoCo | 3.11.0 |
 | MuJoCoUni 运行时 | mujoco_uni_runtime 0.5.0 |
-| mjbatch | 0.1.0（thirdparty/mjbatch，本地编译） |
+| mjbatch | 0.1.0（PyPI） |
 
 ## 测试方法
 

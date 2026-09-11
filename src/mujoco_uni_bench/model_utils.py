@@ -31,11 +31,11 @@ except ImportError:
             BatchEnvPool = None
             HAS_BATCH_ENV = False
 
-# mjbatch (thirdparty/): optional batched-executor arm. Requires mujoco==3.11.0.
+# mjbatch (PyPI): optional batched-executor arm. Requires mujoco==3.11.0.
 try:
     import mjbatch
     HAS_MJBATCH = True
-    print("mjbatch available (thirdparty)")
+    print("mjbatch available (PyPI)")
 except ImportError:
     mjbatch = None
     HAS_MJBATCH = False
