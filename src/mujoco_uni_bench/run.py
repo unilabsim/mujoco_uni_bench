@@ -44,7 +44,7 @@ def main():
                         choices=["batch_env", "mjbatch", "python"],
                         help="Implementations to measure (default: batch_env if "
                              "available, else python loop). mjbatch comes from "
-                             "thirdparty/mjbatch.")
+                             "the PyPI mjbatch package.")
     parser.add_argument("--fwd-chunk-size", type=int, default=4,
                         help="Thread-pool chunk size for forward() (default: 4)")
     parser.add_argument("--output", type=str, default="benchmark_results.json")
